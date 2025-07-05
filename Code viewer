@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>NVN Live Code Editor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/dracula.css">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      font-family: 'Segoe UI', sans-serif;
+      color: black;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .preview {
+      width: 90%;
+      height: 300px;
+      margin-top: 20px;
+      background: white;
+      box-shadow: 0 0 15px #ff0051;
+      border: none;
+    }
+
+    .editor {
+      width: 90%;
+      margin: 20px 0;
+      box-shadow: 0 0 15px #ff0051;
+      border: none;
+    }
+
+    .CodeMirror {
+      height: 400px;
+      font-size: 11px; /* Smaller font */
+      background-color: #1e1e1e;
+      color: white;
+    }
+
+    .CodeMirror-gutters {
+      background-color: #2a2a2a;
+      border-right: 1px solid #444;
+    }
+
+    .CodeMirror-linenumber {
+      color: #ccc;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      padding: 10px 40px;
+      background-color: #ff0051;
+      border: none;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background-color: #e60047;
+    }
+
+    #copyMessage {
+      font-size: 13px;
+      color: green;
+      margin-bottom: 30px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <iframe class="preview" id="preview"></iframe>
+
+  <div class="editor">
+    <textarea id="code">
+<html>
+  <head>
+    <style>
+      body {
+        background: lightblue;
+        text-align: center;
+      }
+      .box {
+        color: red;
+        font-size: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="box">Hello Zeeshan!</div>
+  </body>
+</html>
+    </textarea>
+  </div>
+
+  <!-- Buttons -->
+  <div class="buttons">
+    <button id="clearBtn">Clear</button>
+    <button id="copyBtn">Copy</button>
+  </div>
+  <div id="copyMessage">Code copied to clipboard!</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/htmlmixed/htmlmixed.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/xml/xml.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/javascript/javascript.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/css/css.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/edit/closetag.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/edit/closebrackets.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/fold/xml-fold.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/edit/matchtags.js"></script>
+
+  <script>
+    const editor = CodeMirror.fromTextArea(document.getElementById("code"), {
+      mode: "htmlmixed",
+      theme: "dracula",
+      lineNumbers: true,
+      autoCloseTags: true,
+      autoCloseBrackets: true,
+      matchTags: { bothTags: true },
+      lineWrapping: true,
+      tabSize: 2,
+      indentUnit: 2,
+      indentWithTabs: false,
+      extraKeys: {
+        'Enter': 'newlineAndIndentContinueMarkup'
+      }
+    });
+
+    function autoCloseTag(cm, ch) {
+      const cursor = cm.getCursor();
+      const line = cm.getLine(cursor.line);
+      const before = line.slice(0, cursor.ch);
+    
+      if (ch === '>') {
+        const tagMatch = before.match(/<([a-zA-Z][a-zA-Z0-9]*)\s*[^>]*>$/);
+        if (tagMatch) {
+          const tagName = tagMatch[1].toLowerCase();
+          
+          const selfClosingTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
+          
+          if (!selfClosingTags.includes(tagName)) 
+			  
+            const closingTag = `</${tagName}>`;
+            cm.replaceRange(closingTag, cursor);
+            cm.setCursor(cursor.line, cursor.ch);
+          }
+        }
+      }
+    }
+
+    editor.on('inputRead', function(cm, change) {
+      if (change.text.length === 1 && change.text[0] === '>') {
+        autoCloseTag(cm, '>');
+      }
+    });
+
+    const previewFrame = document.getElementById("preview");
+
+    editor.on("change", () => {
+      const code = editor.getValue();
+      const preview = previewFrame.contentDocument || previewFrame.contentWindow.document;
+      preview.open();
+      preview.write(code);
+      preview.close();
+    });
+
+    editor.setValue(editor.getValue());
+
+    document.getElementById("clearBtn").addEventListener("click", () => {
+      editor.setValue("");
+    });
+	  
+    document.getElementById("copyBtn").addEventListener("click", () => {
+      const code = editor.getValue();
+      navigator.clipboard.writeText(code).then(() => {
+        const msg = document.getElementById("copyMessage");
+        msg.style.display = "block";
+        setTimeout(() => {
+          msg.style.display = "none";
+        }, 2000);
+      });
+    });
+  </script>
+
+</body>
+</html>
